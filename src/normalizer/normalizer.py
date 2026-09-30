@@ -1,7 +1,7 @@
 """
 ULPF Normalizer — converts any parsed log dict into an OCSF 1.9.0 Network Activity event.
 
-Supported source formats: syslog, cef, json
+Supported source formats: syslog, cef, json, xml, csv, leef
 Output schema: see universal_event_schema_v0.1.md and src/schema/universal_event.py
 
 Key fixes vs. original normalizer.py:
@@ -36,7 +36,7 @@ OCSF_VERSION = "1.9.0"
 PRODUCT_META = {
     "name": "ULPF",
     "version": "0.1.0",
-    "vendor_name": "SIH-Team",
+    "vendor_name": "ULPF",
 }
 
 # ── Activity ID mapping ────────────────────────────────────────────────────────
@@ -472,6 +472,12 @@ _NORMALIZER_MAP = {
     "syslog": normalize_syslog,
     "cef":    normalize_cef,
     "json":   normalize_json,
+    # XML, CSV, and LEEF parsers all resolve fields to the same canonical
+    # names (src_ip, dst_ip, src_port, dst_port, protocol, message, …)
+    # used by normalize_json — so they share that normalizer directly.
+    "xml":    normalize_json,
+    "csv":    normalize_json,
+    "leef":   normalize_json,
 }
 
 
@@ -486,7 +492,7 @@ def normalize(
     Convert a parsed log dict into an OCSF 1.9.0 Network Activity event dict.
 
     Args:
-        format_id:         one of 'syslog', 'cef', 'json'
+        format_id:         one of 'syslog', 'cef', 'json', 'xml', 'csv', 'leef'
         parsed:            output of the corresponding parser
         ulpf_event_id:     UUID4 string for the normalized event
         ulpf_raw_event_id: UUID4 string of the corresponding raw event row

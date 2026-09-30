@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ULPF — Enterprise Architecture & Future Implementation Roadmap</title>
+  <meta name="description" content="Technical blueprint, architecture specifications, and implementation roadmap for the Universal Log Parsing Framework (ULPF)." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #080c16;
+      --surface:     #0d1424;
+      --surface2:    #131e36;
+      --surface3:    #1a2949;
+      --border:      #1e2d4d;
+      --border-glow: #2d4575;
+      --accent:      #3b82f6;
+      --accent-glow: rgba(59,130,246,0.25);
+      --purple:      #8b5cf6;
+      --purple-glow: rgba(139,92,246,0.25);
+      --emerald:     #10b981;
+      --amber:       #f59e0b;
+      --rose:        #f43f5e;
+      --cyan:        #06b6d4;
+      --text:        #f1f5f9;
+      --text-dim:    #94a3b8;
+      --text-muted:  #64748b;
+      --mono:        'JetBrains Mono', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.15), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(139,92,246,0.08), transparent 60%);
+    }
+
+    /* ── Sticky Top Nav ── */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 20, 36, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .back-btn:hover {
+      background: var(--surface3);
+      border-color: var(--accent);
+      transform: translateX(-2px);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.3);
+      color: var(--emerald);
+      letter-spacing: 0.5px;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .nav-link {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.2s, background 0.2s;
+    }
+    .nav-link:hover {
+      color: var(--text);
+      background: var(--surface2);
+    }
+    .nav-link.primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .nav-link.primary:hover {
+      background: #2563eb;
+    }
+
+    /* ── Hero Section ── */
+    .hero {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 64px 36px 48px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.2;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      max-width: 820px;
+      margin: 0 auto;
+      font-size: 17px;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+
+    /* ── Quick Stats Grid ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      max-width: 1280px;
+      margin: 20px auto 56px;
+      padding: 0 36px;
+    }
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+    .stat-box:nth-child(2)::before { background: linear-gradient(90deg, var(--purple), transparent); }
+    .stat-box:nth-child(3)::before { background: linear-gradient(90deg, var(--emerald), transparent); }
+    .stat-box:nth-child(4)::before { background: linear-gradient(90deg, var(--cyan), transparent); }
+    .stat-num {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      font-family: var(--mono);
+      margin-bottom: 4px;
+    }
+    .stat-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    /* ── Main Container ── */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 36px 80px;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-subtitle {
+      font-size: 15px;
+      color: var(--text-dim);
+      margin-bottom: 32px;
+      max-width: 800px;
+    }
+
+    /* ── Architecture Visual Flow ── */
+    .arch-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px;
+      margin-bottom: 64px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .flow-pipeline {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      position: relative;
+    }
+    .pipeline-stage {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 20px;
+      position: relative;
+      transition: all 0.25s ease;
+    }
+    .pipeline-stage:hover {
+      border-color: var(--accent);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+    .stage-badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+    .stage-1 .stage-badge { background: rgba(59,130,246,0.15); color: var(--accent); }
+    .stage-2 .stage-badge { background: rgba(139,92,246,0.15); color: var(--purple); }
+    .stage-3 .stage-badge { background: rgba(16,185,129,0.15); color: var(--emerald); }
+    .stage-4 .stage-badge { background: rgba(245,158,11,0.15); color: var(--amber); }
+    .stage-5 .stage-badge { background: rgba(6,182,212,0.15); color: var(--cyan); }
+    .stage-name {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .stage-desc {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .stage-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .stage-tag {
+      font-size: 10.5px;
+      font-family: var(--mono);
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: var(--surface3);
+      color: var(--text-dim);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* ── Four Strategic Pillars ── */
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
+      gap: 24px;
+      margin-bottom: 64px;
+    }
+    @media (max-width: 768px) {
+      .pillars-grid { grid-template-columns: 1fr; }
+    }
+    .pillar-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      transition: border-color 0.25s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    .pillar-card:hover {
+      border-color: var(--border-glow);
+    }
+    .pillar-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .pillar-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .icon-p1 { background: rgba(59,130,246,0.15); color: var(--accent); border: 1px solid rgba(59,130,246,0.3); }
+    .icon-p2 { background: rgba(139,92,246,0.15); color: var(--purple); border: 1px solid rgba(139,92,246,0.3); }
+    .icon-p3 { background: rgba(16,185,129,0.15); color: var(--emerald); border: 1px solid rgba(16,185,129,0.3); }
+    .icon-p4 { background: rgba(6,182,212,0.15); color: var(--cyan); border: 1px solid rgba(6,182,212,0.3); }
+
+    .pillar-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .pillar-subtitle {
+      font-size: 12px;
+      font-family: var(--mono);
+      color: var(--text-muted);
+    }
+    .pillar-body {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.7;
+      margin-bottom: 24px;
+      flex-grow: 1;
+    }
+    .spec-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid var(--border);
+    }
+    .spec-item {
+      font-size: 13px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--text);
+    }
+    .spec-check {
+      color: var(--emerald);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    /* ── Roadmap Phases Timeline ── */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 64px;
+    }
+    .phase-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 32px;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 32px;
+      align-items: center;
+      transition: all 0.25s ease;
+    }
+    @media (max-width: 768px) {
+      .phase-card { grid-template-columns: 1fr; gap: 16px; }
+    }
+    .phase-card:hover {
+      border-color: var(--border-glow);
+      background: var(--surface2);
+    }
+    .phase-card.active-phase {
+      border-color: var(--accent);
+      box-shadow: 0 0 24px rgba(59,130,246,0.15);
+    }
+    .phase-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .phase-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+    .badge-done { background: rgba(16,185,129,0.15); color: var(--emerald); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-current { background: rgba(59,130,246,0.15); color: var(--accent); border: 1px solid rgba(59,130,246,0.3); }
+    .badge-next { background: rgba(139,92,246,0.15); color: var(--purple); border: 1px solid rgba(139,92,246,0.3); }
+    .badge-future { background: rgba(148,163,184,0.1); color: var(--text-dim); border: 1px solid var(--border); }
+    .phase-time {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+    .phase-content h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .phase-content p {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+    .phase-milestones {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .milestone-pill {
+      font-size: 11.5px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      background: var(--surface3);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Compliance & Standards Mapping ── */
+    .compliance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-bottom: 64px;
+    }
+    .compliance-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+    }
+    .compliance-box h4 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .compliance-box p {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    /* ── Callout Banner / Action ── */
+    .action-banner {
+      background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(139,92,246,0.12));
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .action-banner h2 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .action-banner p {
+      font-size: 15px;
+      color: var(--text-dim);
+      max-width: 680px;
+    }
+    .banner-actions {
+      display: flex;
+      gap: 14px;
+      margin-top: 8px;
+    }
+    .btn-cta {
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-cta.primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-cta.primary:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+    .btn-cta.secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-cta.secondary:hover {
+      background: var(--surface3);
+      border-color: var(--text-dim);
+    }
+
+    /* ── Footer ── */
+    .page-footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 36px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top Nav ── -->
+  <nav class="nav">
+    <div class="nav-left">
+      <a href="/" class="back-btn" id="nav-back">← Back to Live Parser</a>
+      <div class="nav-brand">
+        <span style="font-weight:700;font-size:16px;letter-spacing:-0.5px;">ULPF Engineering</span>
+        <span class="nav-badge">OCSF 1.9.0 COMPLIANT</span>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="/examples" class="nav-link">Test Lab Samples</a>
+      <a href="/docs" target="_blank" class="nav-link">API Swagger</a>
+      <a href="/" class="nav-link primary">Open Parser</a>
+    </div>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <header class="hero">
+    <div class="hero-eyebrow">Enterprise Telemetry Specification</div>
+    <h1>Universal Log Parsing Framework Architecture &amp; Future Vision</h1>
+    <p>
+      An enterprise-grade, high-throughput standard for universal log ingestion, multi-vendor schema normalization, 
+      and tamper-evident cryptographic chain-of-custody for hybrid multi-cloud telemetry.
+    </p>
+  </header>
+
+  <!-- ── Stats Overview ── -->
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-num">6 Formats</div>
+      <div class="stat-desc">Native zero-dependency parsers for CEF, Syslog, JSON, XML, CSV &amp; LEEF</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">OCSF 1.9.0</div>
+      <div class="stat-desc">Standardized Open Cybersecurity Schema Framework taxonomy</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">SHA-256</div>
+      <div class="stat-desc">Cryptographic Merkle tree ledger ensuring non-repudiation &amp; auditability</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">Sub-ms</div>
+      <div class="stat-desc">Deterministic parsing latency per record with zero external runtime bloat</div>
+    </div>
+  </div>
+
+  <main class="container">
+
+    <!-- ── System Architecture Pipeline Flow ── -->
+    <h2 class="section-title">System Architecture Pipeline</h2>
+    <p class="section-subtitle">
+      End-to-end data pipeline from heterogeneous distributed log sources through normalization, cryptographic verification, and analytical storage.
+    </p>
+
+    <div class="arch-card">
+      <div class="flow-pipeline">
+
+        <!-- Stage 1 -->
+        <div class="pipeline-stage stage-1">
+          <div class="stage-badge">Stage 01</div>
+          <div class="stage-name">Ingestion Gateway</div>
+          <div class="stage-desc">Dual REST/WebSocket gateway with rate-limiting, IP throttling, and batch chunking.</div>
+          <div class="stage-tags">
+            <span class="stage-tag">FastAPI</span>
+            <span class="stage-tag">Asyncio</span>
+            <span class="stage-tag">TokenBucket</span>
+          </div>
+        </div>
+
+        <!-- Stage 2 -->
+        <div class="pipeline-stage stage-2">
+          <div class="stage-badge">Stage 02</div>
+          <div class="stage-name">Format Dispatcher</div>
+          <div class="stage-desc">High-speed heuristic pattern matching routing to 6 specialized format engines.</div>
+          <div class="stage-tags">
+            <span class="stage-tag">CEF / LEEF</span>
+            <span class="stage-tag">Syslog 5424</span>
+            <span class="stage-tag">JSON / XML / CSV</span>
+          </div>
+        </div>
+
+        <!-- Stage 3 -->
+        <div class="pipeline-stage stage-3">
+          <div class="stage-badge">Stage 03</div>
+          <div class="stage-name">OCSF Normalizer</div>
+          <div class="stage-desc">Transforms vendor-specific semantics into standardized OCSF classes, categories &amp; severities.</div>
+          <div class="stage-tags">
+            <span class="stage-tag">OCSF 1.9.0</span>
+            <span class="stage-tag">Type Cast</span>
+            <span class="stage-tag">Sanitization</span>
+          </div>
+        </div>
+
+        <!-- Stage 4 -->
+        <div class="pipeline-stage stage-4">
+          <div class="stage-badge">Stage 04</div>
+          <div class="stage-name">Merkle Ledger</div>
+          <div class="stage-desc">Computes SHA-256 record hashes and Merkle root per batch to guarantee chain-of-custody.</div>
+          <div class="stage-tags">
+            <span class="stage-tag">Merkle Tree</span>
+            <span class="stage-tag">Immutable Block</span>
+            <span class="stage-tag">Non-Repudiation</span>
+          </div>
+        </div>
+
+        <!-- Stage 5 -->
+        <div class="pipeline-stage stage-5">
+          <div class="stage-badge">Stage 05</div>
+          <div class="stage-name">Analytical Sinks</div>
+          <div class="stage-desc">Structured persistence and real-time streaming connectors for SIEMs and Data Lakes.</div>
+          <div class="stage-tags">
+            <span class="stage-tag">DuckDB / SQLite</span>
+            <span class="stage-tag">Splunk HEC</span>
+            <span class="stage-tag">S3 Iceberg</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Four Strategic Pillars ── -->
+    <h2 class="section-title">Strategic Technical Pillars</h2>
+    <p class="section-subtitle">
+      Core engineering initiatives addressing the enterprise requirements outlined in the Problem Statement.
+    </p>
+
+    <div class="pillars-grid">
+
+      <!-- Pillar 1 -->
+      <div class="pillar-card">
+        <div class="pillar-header">
+          <div class="pillar-icon icon-p1">⚡</div>
+          <div>
+            <div class="pillar-title">Vectorized High-Throughput Engine</div>
+            <div class="pillar-subtitle">PILLAR I — PERFORMANCE &amp; SCALABILITY</div>
+          </div>
+        </div>
+        <div class="pillar-body">
+          To accommodate tens of millions of events per second generated across global enterprise infrastructure, the ingestion layer is being upgraded from purely interpreted Python dispatch to SIMD-accelerated zero-copy parsing kernels.
+        </div>
+        <ul class="spec-list">
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Rust / PyO3 Kernels:</strong> Zero-copy parsing routines for high-frequency formats (Syslog RFC 5424, CEF, LEEF).</span></li>
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Distributed Message Bus:</strong> Native Apache Kafka &amp; Redpanda partitioned consumer groups with backpressure management.</span></li>
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Target Throughput:</strong> Sustained &gt;500,000 EPS per cluster node with p99 normalization latency under 1.2ms.</span></li>
+        </ul>
+      </div>
+
+      <!-- Pillar 2 -->
+      <div class="pillar-card">
+        <div class="pillar-header">
+          <div class="pillar-icon icon-p2">🧠</div>
+          <div>
+            <div class="pillar-title">Autonomous Schema Inference</div>
+            <div class="pillar-subtitle">PILLAR II — EXTENSIBILITY &amp; SELF-HEALING</div>
+          </div>
+        </div>
+        <div class="pillar-body">
+          Zero-day log formats, proprietary appliance outputs, and silent schema drifts frequently break fragile SIEM parsers. ULPF incorporates structural token clustering and adaptive inference to handle unknown formats automatically.
+        </div>
+        <ul class="spec-list">
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Entropy Token Classification:</strong> Automatically delineates key-value delimiters, headers, timestamps, and IP addresses.</span></li>
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Schema Drift Alerting:</strong> Detects altered field nomenclature (e.g., vendor update renaming <code>src_ip</code> to <code>sourceIP</code>).</span></li>
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Dynamic Rule Hot-Reload:</strong> Ingest new normalization dictionaries at runtime via API without restarting service pods.</span></li>
+        </ul>
+      </div>
+
+      <!-- Pillar 3 -->
+      <div class="pillar-card">
+        <div class="pillar-header">
+          <div class="pillar-icon icon-p3">🛡️</div>
+          <div>
+            <div class="pillar-title">Zero-Trust Cryptographic Ledger</div>
+            <div class="pillar-subtitle">PILLAR III — AUDITABILITY &amp; INTEGRITY</div>
+          </div>
+        </div>
+        <div class="pillar-body">
+          In legal investigations, regulatory inquiries, and incident response, log authenticity must be indisputable. ULPF provides mathematically verifiable proof of log integrity from the moment of ingestion.
+        </div>
+        <ul class="spec-list">
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>RFC 6962 Merkle Tree Proofs:</strong> Generate cryptographic proof that an individual event was part of a specific block without disclosing adjacent records.</span></li>
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Hardware HSM / KMS Signatures:</strong> Blocks are digitally signed using Cloud KMS (AWS KMS, GCP Cloud HSM) private keys.</span></li>
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Tamper Detection:</strong> Instant flagging of retroactive log tampering or row deletions in forensics audits.</span></li>
+        </ul>
+      </div>
+
+      <!-- Pillar 4 -->
+      <div class="pillar-card">
+        <div class="pillar-header">
+          <div class="pillar-icon icon-p4">🌐</div>
+          <div>
+            <div class="pillar-title">Hybrid Lakehouse &amp; SIEM Sinks</div>
+            <div class="pillar-subtitle">PILLAR IV — INTEROPERABILITY &amp; ECOSYSTEM</div>
+          </div>
+        </div>
+        <div class="pillar-body">
+          Eliminating vendor lock-in by providing turnkey streaming exporters that write simultaneously to real-time alerting systems (Splunk, Elastic, Sentinel) and low-cost columnar object storage (Iceberg, Parquet).
+        </div>
+        <ul class="spec-list">
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Direct Splunk &amp; Elastic Sinks:</strong> Automated HEC batch dispatch with OCSF-to-ECS semantic translation.</span></li>
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Apache Iceberg &amp; Parquet:</strong> High-compression columnar storage partition by year/month/day/tenant for DuckDB analytics.</span></li>
+          <li class="spec-item"><span class="spec-check">✓</span><span><strong>OpenTelemetry Exporter:</strong> Standard OTLP gRPC streaming for native integration into OTEL collectors and Grafana.</span></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- ── Implementation Roadmap Timeline ── -->
+    <h2 class="section-title">Implementation Roadmap &amp; Phases</h2>
+    <p class="section-subtitle">
+      Systematic delivery milestones advancing ULPF from high-precision standalone parser to distributed enterprise telemetry fabric.
+    </p>
+
+    <div class="timeline">
+
+      <!-- Phase 1 -->
+      <div class="phase-card">
+        <div class="phase-meta">
+          <span class="phase-badge badge-done">Completed</span>
+          <span class="phase-time">Phase 1</span>
+        </div>
+        <div class="phase-content">
+          <h3>Core Engine &amp; Multi-Format Zero-Dependency Parsers</h3>
+          <p>Establish production-grade parsing foundation covering the 6 primary enterprise logging standards with strict zero-external-dependency rule.</p>
+          <div class="phase-milestones">
+            <span class="milestone-pill">Syslog RFC 5424 / 3164</span>
+            <span class="milestone-pill">CEF v0 / v1</span>
+            <span class="milestone-pill">JSON Flat &amp; Nested</span>
+            <span class="milestone-pill">XML Safe ET Parser</span>
+            <span class="milestone-pill">CSV Dynamic Headers</span>
+            <span class="milestone-pill">LEEF 1.0 &amp; 2.0</span>
+            <span class="milestone-pill">OCSF 1.9.0 Schema</span>
+            <span class="milestone-pill">SHA-256 Merkle Chain</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 2 -->
+      <div class="phase-card active-phase">
+        <div class="phase-meta">
+          <span class="phase-badge badge-current">In Progress</span>
+          <span class="phase-time">Phase 2</span>
+        </div>
+        <div class="phase-content">
+          <h3>Enterprise Hardening &amp; Test Lab Suite</h3>
+          <p>Production hardening with token bucket rate limiting, IP throttling, comprehensive multi-vendor test lab, and automated Swagger/ReDoc schemas.</p>
+          <div class="phase-milestones">
+            <span class="milestone-pill">Token-Bucket Rate Limiter</span>
+            <span class="milestone-pill">Input Sanitization (XSS/SQLi)</span>
+            <span class="milestone-pill">Interactive Test Lab UI</span>
+            <span class="milestone-pill">60+ Vendor Samples</span>
+            <span class="milestone-pill">PostgreSQL &amp; SQLite Adapters</span>
+            <span class="milestone-pill">Chain Integrity Verification API</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 3 -->
+      <div class="phase-card">
+        <div class="phase-meta">
+          <span class="phase-badge badge-next">Next Quarter</span>
+          <span class="phase-time">Phase 3</span>
+        </div>
+        <div class="phase-content">
+          <h3>Streaming Telemetry &amp; Vectorized Parsing</h3>
+          <p>Scale horizontal capacity with streaming consumer groups, SIMD Rust parser bindings, and real-time Kafka integration.</p>
+          <div class="phase-milestones">
+            <span class="milestone-pill">Rust PyO3 Extension</span>
+            <span class="milestone-pill">Kafka / Redpanda Ingest Connector</span>
+            <span class="milestone-pill">Distributed Worker Pool</span>
+            <span class="milestone-pill">Splunk HEC Exporter</span>
+            <span class="milestone-pill">Elastic / OpenSearch Output</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 4 -->
+      <div class="phase-card">
+        <div class="phase-meta">
+          <span class="phase-badge badge-future">Target Vision</span>
+          <span class="phase-time">Phase 4</span>
+        </div>
+        <div class="phase-content">
+          <h3>Autonomous Federation &amp; Zero-Trust Audit Receipts</h3>
+          <p>Hardware-backed cryptographic notarization, self-healing schema inference, and multi-tenant lakehouse storage.</p>
+          <div class="phase-milestones">
+            <span class="milestone-pill">Cloud KMS / HSM Signatures</span>
+            <span class="milestone-pill">Adaptive Schema Inference</span>
+            <span class="milestone-pill">Apache Iceberg on S3/GCS</span>
+            <span class="milestone-pill">OTel Collector Plugin</span>
+            <span class="milestone-pill">SOC2 Audit Certificate Generation</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Regulatory Compliance ── -->
+    <h2 class="section-title">Regulatory &amp; Compliance Standards</h2>
+    <p class="section-subtitle">
+      How ULPF’s immutable blockchain ledger and canonical OCSF normalization satisfy enterprise audit mandates.
+    </p>
+
+    <div class="compliance-grid">
+      <div class="compliance-box">
+        <h4>🔒 SOC 2 Type II</h4>
+        <p>Addresses Trust Services Criteria <strong>CC6.1–CC6.8</strong> by enforcing tamper-proof audit trails, non-repudiation, and cryptographic event sequencing.</p>
+      </div>
+      <div class="compliance-box">
+        <h4>🛡️ ISO/IEC 27001:2022</h4>
+        <p>Satisfies <strong>Control A.12.4 (Logging &amp; Monitoring)</strong> ensuring event logs recording administrator and operator activities are protected against tampering.</p>
+      </div>
+      <div class="compliance-box">
+        <h4>🏥 HIPAA Security Rule</h4>
+        <p>Meets <strong>§164.312(b) Audit Controls</strong> requiring hardware/software mechanisms that record and examine activity in information systems containing PHI.</p>
+      </div>
+      <div class="compliance-box">
+        <h4>💳 PCI-DSS v4.0</h4>
+        <p>Direct compliance with <strong>Requirement 10</strong>: logs are time-synchronized, protected against alteration, and cryptographically verified on demand.</p>
+      </div>
+    </div>
+
+    <!-- ── CTA Action Banner ── -->
+    <div class="action-banner">
+      <h2>Experience ULPF in Action</h2>
+      <p>
+        Explore pre-loaded real-world enterprise log samples in our interactive Test Lab, or paste your own raw telemetry directly into the live parser.
+      </p>
+      <div class="banner-actions">
+        <a href="/examples" class="btn-cta primary">Explore Test Lab Samples →</a>
+        <a href="/" class="btn-cta secondary">Open Live Parser</a>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="page-footer">
+    ULPF Engineering · Universal Log Parsing Framework · OCSF 1.9.0 Canonical Schema · Zero External Dependencies
+  </footer>
+
+  <script>
+    document.getElementById('nav-back').addEventListener('click', function(e) {
+      if (window.history.length > 1) {
+        e.preventDefault();
+        window.history.back();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -5,26 +5,33 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from api.routes import events, integrity, raw, ingest, health
+from api.security import limiter, rate_limit_handler, SecurityHeadersAndSizeMiddleware
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="ULPF — Universal Log Pre-processing Framework",
         description=(
-            "SIH Project: Ingest heterogeneous network/security logs, "
-            "normalize to OCSF 1.9.0, anchor integrity on a hashchain ledger, "
+            "Enterprise-grade log ingestion and normalization. Ingest multi-vendor network/security logs, "
+            "normalize to OCSF 1.9.0, anchor integrity on a cryptographic hashchain ledger, "
             "and detect tampered events."
         ),
         version="0.1.0",
         docs_url="/docs",
         redoc_url="/redoc",
     )
+
+    # ── Security & Rate Limiting state ────────────────────────────────────────
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
     # CORS — allow all origins for demo (restrict in production)
     app.add_middleware(
@@ -33,6 +40,25 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Security Headers & Request Payload Protection Middleware
+    app.add_middleware(SecurityHeadersAndSizeMiddleware)
+    app.add_middleware(SlowAPIMiddleware)
+
+    # ── Structured exception handling (OWASP sanitization) ────────────────────
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        import traceback
+        print(f"[ULPF ERROR] {request.method} {request.url.path}: {exc}")
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Internal Server Error",
+                "detail": "An internal error occurred while processing the request.",
+                "status_code": 500,
+            },
+        )
 
     # ── API routes ────────────────────────────────────────────────────────────
     app.include_router(health.router,    prefix="/api", tags=["Health"])
@@ -58,6 +84,16 @@ def create_app() -> FastAPI:
         @app.get("/", include_in_schema=False)
         def serve_frontend() -> FileResponse:
             return FileResponse(str(frontend_dir / "index.html"))
+
+        @app.get("/examples", include_in_schema=False)
+        @app.get("/examples.html", include_in_schema=False)
+        def serve_examples() -> FileResponse:
+            return FileResponse(str(frontend_dir / "examples.html"))
+
+        @app.get("/roadmap", include_in_schema=False)
+        @app.get("/roadmap.html", include_in_schema=False)
+        def serve_roadmap() -> FileResponse:
+            return FileResponse(str(frontend_dir / "roadmap.html"))
     else:
         @app.get("/", tags=["Health"])
         def health_check() -> dict:

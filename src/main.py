@@ -182,13 +182,24 @@ def _run_export(args: argparse.Namespace) -> None:
 
 
 def _run_api(_args: argparse.Namespace) -> None:
+    import threading
+    import time
+    import webbrowser
     import uvicorn
     from api.app import create_app
     from config import Config
 
     app = create_app()
+    url = f"http://localhost:{Config.API_PORT}"
     print(f"[ULPF] Starting API on http://{Config.API_HOST}:{Config.API_PORT}")
     print(f"[ULPF] Swagger UI -> http://{Config.API_HOST}:{Config.API_PORT}/docs")
+    print(f"[ULPF] Browser will open at {url} ...")
+
+    def _open_browser():
+        time.sleep(1.5)  # give uvicorn time to bind the port
+        webbrowser.open(url)
+
+    threading.Thread(target=_open_browser, daemon=True).start()
     uvicorn.run(app, host=Config.API_HOST, port=Config.API_PORT)
 
 
@@ -202,7 +213,7 @@ def _run_init_db(_args: argparse.Namespace) -> None:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="ulpf",
-        description="Universal Log Pre-processing Framework (ULPF) — SIH Project",
+        description="Universal Log Pre-processing Framework (ULPF) — Enterprise Log Pipeline",
     )
     sub = p.add_subparsers(dest="command", required=True)
 

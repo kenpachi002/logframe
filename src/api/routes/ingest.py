@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from api.security import limiter, require_api_key
 from config import Config
 from integrity.blockchain import LocalHashchain
 from pipeline.processor import process_batch
@@ -27,16 +28,22 @@ class IngestRequest(BaseModel):
         ...,
         description="Raw log text — one log entry per line. Mixed formats supported.",
         min_length=1,
+        max_length=2_000_000,
     )
     source_hint: str = Field(
         "auto",
-        description="Format hint: 'auto' (default), 'syslog', 'cef', or 'json'. "
-                    "Auto-detection is always used; this field is informational.",
+        description="Format hint: 'auto' (default), 'syslog', 'cef', 'json', 'xml', 'csv', 'leef'. "
+                    "Auto-detection is always applied; this is informational only.",
     )
 
 
 @router.post("/ingest", summary="Ingest raw log lines through the full ULPF pipeline")
-def ingest_logs(req: IngestRequest) -> dict[str, Any]:
+@limiter.limit(Config.RATE_LIMIT_INGEST)
+def ingest_logs(
+    request: Request,
+    req: IngestRequest,
+    _auth: str | None = Depends(require_api_key),
+) -> dict[str, Any]:
     """
     Full pipeline for a batch of raw log lines submitted from the UI.
 
@@ -54,6 +61,14 @@ def ingest_logs(req: IngestRequest) -> dict[str, Any]:
     lines = [ln for ln in req.logs.splitlines() if ln.strip()]
     if not lines:
         raise HTTPException(status_code=422, detail="No non-empty log lines found in input.")
+
+    # Hard cap: prevent accidental or malicious oversized batches
+    max_lines = Config.BATCH_SIZE * 10  # default 500
+    if len(lines) > max_lines:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Batch too large: {len(lines)} lines submitted. Maximum is {max_lines} lines per request.",
+        )
 
     blockchain = LocalHashchain(Config.BLOCKCHAIN_LEDGER_PATH)
 

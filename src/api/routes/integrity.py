@@ -5,9 +5,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from api.security import limiter, require_api_key
 from config import Config
 from integrity.blockchain import LocalHashchain
 from pipeline.processor import verify_event_integrity
@@ -30,7 +31,12 @@ class VerifyEventRequest(BaseModel):
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.post("/verify/event", summary="Verify integrity of a single raw event")
-def verify_event(req: VerifyEventRequest) -> dict[str, Any]:
+@limiter.limit("60/minute")
+def verify_event(
+    request: Request,
+    req: VerifyEventRequest,
+    _auth: str | None = Depends(require_api_key),
+) -> dict[str, Any]:
     with get_session() as session:
         result = verify_event_integrity(
             raw_event_id=req.raw_event_id,
@@ -43,7 +49,11 @@ def verify_event(req: VerifyEventRequest) -> dict[str, Any]:
 
 
 @router.post("/verify/chain", summary="Verify entire blockchain chain integrity")
-def verify_chain() -> dict[str, Any]:
+@limiter.limit("60/minute")
+def verify_chain(
+    request: Request,
+    _auth: str | None = Depends(require_api_key),
+) -> dict[str, Any]:
     chain = _get_chain()
     is_valid, detail = chain.verify_chain()
     return {

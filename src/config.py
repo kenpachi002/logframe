@@ -96,3 +96,9 @@ class Config:
     # API
     API_HOST: str = _env("API_HOST", "0.0.0.0")
     API_PORT: int = _env_int("API_PORT", 8000)
+
+    # Security & Scalability
+    RATE_LIMIT_DEFAULT: str = _env("RATE_LIMIT_DEFAULT", "120/minute")
+    RATE_LIMIT_INGEST: str = _env("RATE_LIMIT_INGEST", "60/minute")
+    MAX_REQUEST_SIZE_BYTES: int = _env_int("MAX_REQUEST_SIZE_BYTES", 2 * 1024 * 1024)  # 2MB
+    API_KEY: str = _env("ULPF_API_KEY", "")  # Optional auth key; if empty, endpoints remain open for demo

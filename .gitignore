@@ -10,46 +10,77 @@ venv/
 .venv/
 env/
 ENV/
+.env.local
+.env.production
 
 # ── Distribution / packaging ──────────────────────────────────────────────────
 dist/
 build/
 *.egg-info/
 *.egg
+MANIFEST
 
 # ── Pytest / coverage ─────────────────────────────────────────────────────────
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 
 # ── Secrets & environment ─────────────────────────────────────────────────────
+# Keep .env.example (template) — never commit the real .env
 .env
 *.env
 
-# ── Database files ────────────────────────────────────────────────────────────
+# ── Database files (runtime data — use PostgreSQL in production) ───────────────
 *.db
 *.sqlite
 *.sqlite3
+ulpf.db
 
-# ── Blockchain ledger (runtime data — preserve .gitkeep placeholder) ──────────
+# ── Blockchain ledger (runtime data — gitkeep preserves the folder) ───────────
 blockchain_ledger/chain.jsonl
 
 # ── Logs ──────────────────────────────────────────────────────────────────────
 *.log
+logs/
 
 # ── IDEs and editors ──────────────────────────────────────────────────────────
-.vscode/
+.vscode/settings.json
+.vscode/launch.json
 .idea/
 *.swp
 *.swo
 *.DS_Store
+Thumbs.db
 
-# ── MyPy ──────────────────────────────────────────────────────────────────────
+# ── MyPy / type checking ──────────────────────────────────────────────────────
 .mypy_cache/
 .dmypy.json
+dmypy.json
 
-# ── Ruff ──────────────────────────────────────────────────────────────────────
+# ── Ruff / linting ────────────────────────────────────────────────────────────
 .ruff_cache/
 
-# ── Node / frontend tooling (if added later) ──────────────────────────────────
+# ── Node / frontend tooling (future) ─────────────────────────────────────────
 node_modules/
+.npm/
+dist/
+.parcel-cache/
+
+# ── Docker volumes (if bind-mounted) ─────────────────────────────────────────
+postgres_data/
+pgdata/
+
+# ── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Desktop.ini
+$RECYCLE.BIN/
+
+# ── Temporary / scratch ───────────────────────────────────────────────────────
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig

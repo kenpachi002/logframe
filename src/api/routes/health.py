@@ -32,10 +32,13 @@ def health() -> dict[str, Any]:
             session.execute(__import__("sqlalchemy").text("SELECT 1"))
     except Exception as exc:
         db_ok = False
-        db_error = str(exc)
+        # Sanitize error to avoid leaking credentials/passwords or server host details
+        db_error = "Database connectivity check failed (verify database status and credentials)"
+
+    overall_status = "ok" if (db_ok and is_valid) else "degraded"
 
     return {
-        "status": "ok",
+        "status": overall_status,
         "service": "ULPF",
         "version": Config.ULPF_VERSION,
         "ocsf_version": Config.OCSF_VERSION,
@@ -45,7 +48,7 @@ def health() -> dict[str, Any]:
         "blockchain_blocks": chain.block_count(),
         "blockchain_valid": is_valid,
         "blockchain_detail": chain_detail,
-        "supported_formats": ["syslog", "cef", "json"],
+        "supported_formats": ["syslog", "cef", "json", "xml", "csv", "leef"],
     }
 
 
@@ -64,16 +67,37 @@ def list_formats() -> dict[str, Any]:
             {
                 "id": "cef",
                 "name": "CEF (Common Event Format)",
-                "description": "ArcSight Common Event Format — used by Cisco, Palo Alto, Fortinet, Check Point",
+                "description": "ArcSight Common Event Format — Cisco, Palo Alto, Fortinet, Check Point",
                 "detection": "Starts with CEF:",
                 "example": "CEF:0|Cisco|ASA|9.1|106001|Inbound TCP connection denied|5|src=10.0.0.1 dst=192.168.1.100",
             },
             {
+                "id": "leef",
+                "name": "LEEF (Log Event Extended Format)",
+                "description": "IBM QRadar format — LEEF 1.0 and 2.0",
+                "detection": "Starts with LEEF:",
+                "example": "LEEF:1.0|IBM|QRadar|7.4.0|NetworkAllow\tsrc=10.0.0.5\tdst=203.0.113.20\tsrcPort=52000\tdstPort=443",
+            },
+            {
+                "id": "xml",
+                "name": "XML",
+                "description": "Windows Event Log, vendor syslog-over-XML, generic event XML",
+                "detection": "Starts with <",
+                "example": "<Event><EventID>5156</EventID><SrcIP>192.168.1.5</SrcIP><DstIP>10.0.0.1</DstIP><Action>Permit</Action></Event>",
+            },
+            {
                 "id": "json",
                 "name": "JSON",
-                "description": "Structured JSON log objects",
+                "description": "Structured JSON log objects — cloud, EDR, application events",
                 "detection": "Starts with {",
                 "example": '{"time":"2024-01-01T12:00:00Z","severity":3,"src_ip":"10.0.0.1","message":"Connection attempt"}',
+            },
+            {
+                "id": "csv",
+                "name": "CSV",
+                "description": "Comma-separated log exports — Fortinet, pfSense, Cisco Meraki, SIEM exports",
+                "detection": "Contains commas, does not match CEF/LEEF",
+                "example": "timestamp,src_ip,dst_ip,protocol,action\n2024-01-15T12:00:00Z,10.0.0.5,8.8.8.8,TCP,allow",
             },
         ]
     }
@@ -93,15 +117,31 @@ def get_samples(fmt: str) -> dict[str, Any]:
         elif fmt == "json":
             from sample.json_log import SAMPLE_JSON_LOGS
             lines = SAMPLE_JSON_LOGS
+        elif fmt == "xml":
+            from sample.xml_log import SAMPLE_XML_LOGS
+            lines = SAMPLE_XML_LOGS
+        elif fmt == "csv":
+            from sample.csv_log import SAMPLE_CSV_LOGS
+            lines = SAMPLE_CSV_LOGS
+        elif fmt == "leef":
+            from sample.leef import SAMPLE_LEEF_LOGS
+            lines = SAMPLE_LEEF_LOGS
         elif fmt == "all":
             from sample.syslog import SAMPLE_SYSLOGS
             from sample.cef import SAMPLE_CEF_LOGS
             from sample.json_log import SAMPLE_JSON_LOGS
-            lines = SAMPLE_SYSLOGS[:4] + SAMPLE_CEF_LOGS[:3] + SAMPLE_JSON_LOGS[:2]
+            from sample.xml_log import SAMPLE_XML_LOGS
+            from sample.csv_log import SAMPLE_CSV_LOGS
+            from sample.leef import SAMPLE_LEEF_LOGS
+            lines = (
+                SAMPLE_SYSLOGS[:3] + SAMPLE_CEF_LOGS[:3]
+                + SAMPLE_JSON_LOGS[:2] + SAMPLE_XML_LOGS[:2]
+                + SAMPLE_CSV_LOGS[:2] + SAMPLE_LEEF_LOGS[:2]
+            )
         else:
             raise HTTPException(
                 status_code=404,
-                detail=f"Unknown format '{fmt}'. Supported: syslog, cef, json, all"
+                detail=f"Unknown format '{fmt}'. Supported: syslog, cef, json, xml, csv, leef, all"
             )
     except ImportError as exc:
         raise HTTPException(status_code=500, detail=f"Sample module error: {exc}") from exc

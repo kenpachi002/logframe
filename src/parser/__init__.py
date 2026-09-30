@@ -6,13 +6,16 @@ Adding a new format:
   2. Add a detect_my_format(src: str) -> bool function below
   3. Add an entry to PARSER_REGISTRY
 
-The registry is evaluated in order: cef → syslog → json.
+The registry is evaluated in order: cef → leef → syslog → xml → json → csv.
 """
 import re
 
-from parser.cef import parse_cef
-from parser.syslog import parse_syslog
+from parser.cef      import parse_cef
+from parser.syslog   import parse_syslog
 from parser.json_log import parse_json_log
+from parser.xml_log  import parse_xml
+from parser.csv_log  import parse_csv_log
+from parser.leef     import parse_leef
 
 
 # ── Detection functions ────────────────────────────────────────────────────────
@@ -21,8 +24,17 @@ def detect_cef(src: str) -> bool:
     return src.lstrip().upper().startswith("CEF:")
 
 
+def detect_leef(src: str) -> bool:
+    return src.lstrip().upper().startswith("LEEF:")
+
+
 def detect_syslog(src: str) -> bool:
     return bool(re.match(r"^<\d+>", src.lstrip()))
+
+
+def detect_xml(src: str) -> bool:
+    s = src.lstrip()
+    return s.startswith("<") and not s.startswith("<<")
 
 
 def detect_json(src: str) -> bool:
@@ -30,12 +42,23 @@ def detect_json(src: str) -> bool:
     return s.startswith("{")
 
 
+def detect_csv(src: str) -> bool:
+    """
+    CSV is the catch-all: accept if the line has at least one comma
+    and does not match any structured format above.
+    """
+    return "," in src and not detect_cef(src) and not detect_leef(src)
+
+
 # ── Registry ───────────────────────────────────────────────────────────────────
 
 PARSER_REGISTRY: dict[str, dict] = {
     "cef":    {"detect": detect_cef,    "parse": parse_cef},
+    "leef":   {"detect": detect_leef,   "parse": parse_leef},
     "syslog": {"detect": detect_syslog, "parse": parse_syslog},
+    "xml":    {"detect": detect_xml,    "parse": parse_xml},
     "json":   {"detect": detect_json,   "parse": parse_json_log},
+    "csv":    {"detect": detect_csv,    "parse": parse_csv_log},
 }
 
 
