@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ulpf
+      POSTGRES_USER: ulpf_user
+      POSTGRES_PASSWORD: ulpf_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ulpf_user -d ulpf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ulpf:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ulpf
+      DB_USER: ulpf_user
+      DB_PASSWORD: ulpf_pass
+      BLOCKCHAIN_LEDGER_PATH: /app/blockchain_ledger/chain.jsonl
+      LOG_TIMEZONE: Asia/Kolkata
+      BATCH_SIZE: 50
+    volumes:
+      - ./blockchain_ledger:/app/blockchain_ledger
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python -m main init-db && python -m main api"
+
+volumes:
+  postgres_data:
