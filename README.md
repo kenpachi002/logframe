@@ -51,14 +51,17 @@ Fortinet CSV       ─┘
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/ulpf.git
-cd ulpf
+git clone https://github.com/kenpachi002/logframe.git
+cd logframe
 
 # 2. Create a virtual environment
 python -m venv .venv
 
-# Windows
-.venv\Scripts\activate
+# Windows (PowerShell)
+.\.venv\Scripts\Activate.ps1
+
+# Windows (CMD)
+.venv\Scripts\activate.bat
 
 # macOS / Linux
 source .venv/bin/activate
@@ -66,23 +69,21 @@ source .venv/bin/activate
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Set PYTHONPATH (required — all source lives under src/)
-# Windows PowerShell
-$env:PYTHONPATH="src"
+# 4. Start the server (auto-opens browser at http://localhost:8000)
+# On Windows, you can also just double-click run.bat or run .\start.ps1
+# Windows PowerShell:
+$env:PYTHONPATH="src"; python -m main api
 
-# Windows CMD
-set PYTHONPATH=src
+# Windows CMD:
+set PYTHONPATH=src && python -m main api
 
-# macOS / Linux
-export PYTHONPATH=src
-
-# 5. Start the server (auto-opens browser)
-python -m main api
+# macOS / Linux:
+export PYTHONPATH=src && python -m main api
 ```
 
 That's it. The browser opens at **http://localhost:8000** automatically.
 
-> **Tip:** No `.env` file needed for local development. ULPF uses SQLite by default with zero configuration.
+> **Tip:** On Windows, you can simply run `.\run.bat` or `.\start.ps1` — it handles `.venv`, `PYTHONPATH`, and starts the server with zero configuration. No `.env` file needed for local development (uses SQLite by default).
 
 ---
 
