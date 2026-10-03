@@ -109,23 +109,27 @@ def parse_structured_data(value: str) -> dict[str, str | dict[str, str]]:
         return {}
 
     result = {}
+    # Match each [...] SD-ELEMENT block (non-greedy, handles escaped brackets)
     for block in re.findall(r"\[([^\]]*)\]", value):
-        parts = block.split()
-        if not parts:
+        if not block.strip():
             continue
+        # SD-ID is the first whitespace-separated token
+        sd_id_m = re.match(r"(\S+)\s*(.*)", block, re.DOTALL)
+        if not sd_id_m:
+            continue
+        sd_id = sd_id_m.group(1)
+        rest = sd_id_m.group(2)
 
-        sd_id = parts[0]
-        attrs = {}
-
-        for item in parts[1:]:
-            m = re.match(r'([^=]+)="(.*)"$', item)
-            if m:
-                attrs[m.group(1)] = (
-                    m.group(2)
-                    .replace(r"\\", "\\")
-                    .replace(r"\"", '"')
-                    .replace(r"\]", "]")
-                )
+        attrs: dict[str, str] = {}
+        # RFC 5424 SD-PARAM: PARAM-NAME "=" %d34 PARAM-VALUE %d34
+        # Values may contain spaces, escaped \", \\, \]
+        for m in re.finditer(r'(\S+?)="((?:[^"\\]|\\.)*)"', rest):
+            attrs[m.group(1)] = (
+                m.group(2)
+                .replace('\\"', '"')
+                .replace("\\\\", "\\")
+                .replace("\\]", "]")
+            )
 
         result[sd_id] = attrs
 

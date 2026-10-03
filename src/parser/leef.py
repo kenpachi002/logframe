@@ -21,7 +21,8 @@ from parser.util import safe_int_cast
 
 
 # Port-valued extension keys (cast to int)
-_PORT_KEYS = {"src", "dst", "srcPort", "dstPort", "spt", "dpt"}
+# NOTE: "src" and "dst" are IP address fields — do NOT include them here.
+_PORT_KEYS = {"srcPort", "dstPort", "spt", "dpt"}
 
 # Canonical field aliases (LEEF extension keys → ULPF canonical)
 _LEEF_ALIASES: dict[str, str] = {

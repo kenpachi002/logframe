@@ -38,8 +38,13 @@ def detect_xml(src: str) -> bool:
 
 
 def detect_json(src: str) -> bool:
+    """
+    Match JSON objects ({}) and arrays ([]).
+    Arrays are detected so that parse_json_log can reject them with a clear
+    error message, rather than silently falling to the CSV catch-all.
+    """
     s = src.lstrip()
-    return s.startswith("{")
+    return s.startswith("{") or s.startswith("[")
 
 
 def detect_csv(src: str) -> bool:

@@ -27,23 +27,31 @@ _NET_FIELD_MAP = {
 }
 
 
+def _strip_ns(tag: str) -> str:
+    """Strip Clark-notation namespace URI from an XML tag, e.g. '{http://...}Event' → 'Event'."""
+    return tag.split("}")[-1] if "}" in tag else tag
+
+
 def _flatten_element(element: ET.Element, prefix: str = "") -> dict[str, str]:
     """Recursively flatten an XML element into a dot-separated key dict."""
     result: dict[str, str] = {}
+    local_tag = _strip_ns(element.tag)
 
     # Own text
     if element.text and element.text.strip():
-        key = prefix if prefix else element.tag
+        key = prefix if prefix else local_tag
         result[key] = element.text.strip()
 
-    # Own attributes
+    # Own attributes (strip namespace from attribute names too)
     for attr_key, attr_val in element.attrib.items():
-        result_key = f"{prefix}.{attr_key}" if prefix else attr_key
+        clean_key = _strip_ns(attr_key)
+        result_key = f"{prefix}.{clean_key}" if prefix else clean_key
         result[result_key] = attr_val
 
     # Child elements (one level deep flattened)
     for child in element:
-        child_prefix = f"{prefix}.{child.tag}" if prefix else child.tag
+        child_local = _strip_ns(child.tag)
+        child_prefix = f"{prefix}.{child_local}" if prefix else child_local
         result.update(_flatten_element(child, child_prefix))
 
     return result
@@ -70,10 +78,10 @@ def parse_xml(log: str) -> dict[str, str | int]:
     # Flatten root text + attributes + children
     result.update(_flatten_element(root))
 
-    # Also do a simple flat top-level child extraction (friend's original logic)
+    # Also do a simple flat top-level child extraction (namespace-stripped)
     for child in root:
         if child.text and child.text.strip():
-            result.setdefault(child.tag, child.text.strip())
+            result.setdefault(_strip_ns(child.tag), child.text.strip())
 
     # Resolve network-field aliases → canonical names
     for canonical, aliases in _NET_FIELD_MAP.items():
@@ -87,7 +95,7 @@ def parse_xml(log: str) -> dict[str, str | int]:
                 break
 
     # Tag the format
-    result.setdefault("_xml_root_tag", root.tag)
+    result.setdefault("_xml_root_tag", _strip_ns(root.tag))
 
     # Preserve complete original event (ULPF requirement)
     result["raw_data"] = log

@@ -35,14 +35,18 @@ def get_as_utc_timestamp(raw: str, zone: str) -> int:
 
 def get_utc_timestamp(raw: str) -> int:
     """
-    Parse an ISO 8601 UTC timestamp (e.g. '2026-09-22T14:15:31Z') and return
-    Unix epoch seconds.  Returns -1 on parse error.
+    Parse an ISO 8601 timestamp (with Z, +HH:MM offset, or no offset) and
+    return Unix epoch seconds (UTC).  Returns -1 on parse error.
+
+    Handles: '2026-09-22T14:15:31Z', '2026-09-22T14:15:31+05:30',
+             '2026-09-22T14:15:31.123Z', '2026-09-22T14:15:31'
     """
-    for fmt in ("%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S.%fZ"):
-        try:
-            return int(
-                datetime.strptime(raw, fmt).replace(tzinfo=timezone.utc).timestamp()
-            )
-        except ValueError:
-            continue
-    return -1
+    try:
+        # Normalize 'Z' → '+00:00' for fromisoformat (Python < 3.11 compat)
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            # Naive datetime — assume UTC
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.astimezone(timezone.utc).timestamp())
+    except ValueError:
+        return -1

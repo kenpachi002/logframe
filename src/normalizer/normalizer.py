@@ -214,6 +214,21 @@ _JSON_MAPPED = {
     "device_product_name", "product_name", "product",
 }
 
+# Keys consumed by LEEF normalizer (header fields promoted to metadata)
+_LEEF_MAPPED = _JSON_MAPPED | {
+    "_leef_version", "_leef_vendor", "_leef_product",
+    "_leef_product_version", "_leef_event_id",
+}
+
+# Severity name → ULPF ID (for JSON/LEEF logs that carry string severity)
+_SEVERITY_NAME_MAP: dict[str, int] = {
+    "informational": 1, "info": 1, "debug": 1,
+    "low": 2, "notice": 2,
+    "medium": 3, "warning": 3, "warn": 3,
+    "high": 4, "error": 4,
+    "critical": 5, "emergency": 5, "alert": 5, "fatal": 5,
+}
+
 
 def _build_base(
     time_val: int,
@@ -394,10 +409,12 @@ def normalize_json(
 ) -> dict:
     raw_data = parsed.get("raw_data", "")
 
+    # Severity: try integer first, then map from string name
+    raw_sev = parsed.get("severity", "")
     try:
-        severity_id = int(parsed.get("severity", -1))
+        severity_id = int(raw_sev)
     except (TypeError, ValueError):
-        severity_id = -1
+        severity_id = _SEVERITY_NAME_MAP.get(str(raw_sev).lower(), -1)
 
     message = _pick(parsed, "message", "msg") or None
     activity_id = _infer_activity_from_dict(parsed)
@@ -466,18 +483,45 @@ def normalize_json(
     return result
 
 
+def normalize_leef(
+    parsed: dict,
+    ulpf_event_id: str,
+    ulpf_raw_event_id: str,
+    log_timezone: str,
+) -> dict:
+    """
+    LEEF-specific normalizer: promotes _leef_* header fields to
+    metadata.source_format_detail instead of leaving them in unmapped.
+    Reuses normalize_json for all network/endpoint fields.
+    """
+    result = normalize_json(parsed, ulpf_event_id, ulpf_raw_event_id, log_timezone)
+
+    # Override source_format and move LEEF header fields into metadata
+    result["metadata"]["source_format"] = "leef"
+    result["metadata"]["source_format_detail"] = {
+        "leef_version": parsed.get("_leef_version"),
+        "vendor": parsed.get("_leef_vendor"),
+        "product": parsed.get("_leef_product"),
+        "product_version": parsed.get("_leef_product_version"),
+        "event_id": parsed.get("_leef_event_id"),
+    }
+
+    # Re-collect unmapped without the LEEF header keys
+    result["unmapped"] = _collect_unmapped(parsed, _LEEF_MAPPED)
+    return result
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 _NORMALIZER_MAP = {
     "syslog": normalize_syslog,
     "cef":    normalize_cef,
     "json":   normalize_json,
-    # XML, CSV, and LEEF parsers all resolve fields to the same canonical
-    # names (src_ip, dst_ip, src_port, dst_port, protocol, message, …)
-    # used by normalize_json — so they share that normalizer directly.
+    # XML and CSV parsers resolve fields to the same canonical names used by
+    # normalize_json — so they share that normalizer directly.
     "xml":    normalize_json,
     "csv":    normalize_json,
-    "leef":   normalize_json,
+    "leef":   normalize_leef,
 }
 
 
