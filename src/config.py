@@ -95,7 +95,7 @@ class Config:
 
     # API
     API_HOST: str = _env("API_HOST", "0.0.0.0")
-    API_PORT: int = _env_int("API_PORT", 8000)
+    API_PORT: int = _env_int("PORT", _env_int("API_PORT", 8000))
 
     # Security & Scalability
     RATE_LIMIT_DEFAULT: str = _env("RATE_LIMIT_DEFAULT", "120/minute")
