@@ -144,6 +144,19 @@ class IntegrityBatch(Base):
     blockchain_block_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
+class RawBatchPayload(Base):
+    """Stores the exact decoded multi-line text submitted for an API batch."""
+    __tablename__ = "raw_batch_payloads"
+
+    batch_id: Mapped[uuid.UUID] = mapped_column(
+        UUIDType,
+        ForeignKey("integrity_batches.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    raw_payload: Mapped[str] = mapped_column(Text, nullable=False)
+    sha256_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
 class TamperCheck(Base):
     """
     Records every tamper-detection check for auditability.

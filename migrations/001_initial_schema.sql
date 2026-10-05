@@ -49,6 +49,13 @@ CREATE TABLE IF NOT EXISTS integrity_batches (
     blockchain_block_hash   CHAR(64)
 );
 
+-- ── raw_batch_payloads ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS raw_batch_payloads (
+    batch_id        UUID PRIMARY KEY REFERENCES integrity_batches(id) ON DELETE CASCADE,
+    raw_payload     TEXT NOT NULL,
+    sha256_hash     CHAR(64) NOT NULL
+);
+
 -- ── tamper_checks ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tamper_checks (
     id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

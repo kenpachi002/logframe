@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from storage.db import get_session
+from storage.models import RawBatchPayload
 from storage.raw_event_repo import get_raw_event, get_raw_events_by_batch
 
 router = APIRouter()
@@ -33,10 +34,16 @@ def get_raw(raw_event_id: str) -> dict[str, Any]:
 @router.get("/raw/batch/{batch_id}", summary="Get all raw events in a batch")
 def get_batch_raw(batch_id: str) -> dict[str, Any]:
     with get_session() as session:
+        try:
+            payload = session.get(RawBatchPayload, batch_id)
+        except ValueError:
+            payload = None
         raws = get_raw_events_by_batch(session, batch_id)
         return {
             "batch_id": batch_id,
             "count": len(raws),
+            "raw_payload": payload.raw_payload if payload else None,
+            "raw_payload_sha256": payload.sha256_hash if payload else None,
             "events": [
                 {
                     "raw_event_id": str(r.id),

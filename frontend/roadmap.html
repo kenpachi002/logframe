@@ -575,8 +575,8 @@
     <div class="hero-eyebrow">Enterprise Telemetry Specification</div>
     <h1>Universal Log Parsing Framework Architecture &amp; Future Vision</h1>
     <p>
-      An enterprise-grade, high-throughput standard for universal log ingestion, multi-vendor schema normalization, 
-      and tamper-evident cryptographic chain-of-custody for hybrid multi-cloud telemetry.
+      A prototype for selected perimeter-log ingestion, OCSF-based normalization,
+      and tamper-evident event and batch integrity. Broader enterprise coverage and scale are future work.
     </p>
   </header>
 
@@ -595,8 +595,8 @@
       <div class="stat-desc">Cryptographic Merkle tree ledger ensuring non-repudiation &amp; auditability</div>
     </div>
     <div class="stat-box">
-      <div class="stat-num">Sub-ms</div>
-      <div class="stat-desc">Deterministic parsing latency per record with zero external runtime bloat</div>
+      <div class="stat-num">Prototype</div>
+      <div class="stat-desc">Focused demonstration; throughput and latency require dedicated benchmarks</div>
     </div>
   </div>
 
@@ -663,11 +663,11 @@
         <div class="pipeline-stage stage-5">
           <div class="stage-badge">Stage 05</div>
           <div class="stage-name">Analytical Sinks</div>
-          <div class="stage-desc">Structured persistence and real-time streaming connectors for SIEMs and Data Lakes.</div>
+          <div class="stage-desc">Current integration surfaces are the REST API and NDJSON export; streaming SIEM and data-lake sinks are future work.</div>
           <div class="stage-tags">
             <span class="stage-tag">DuckDB / SQLite</span>
-            <span class="stage-tag">Splunk HEC</span>
-            <span class="stage-tag">S3 Iceberg</span>
+            <span class="stage-tag">REST API</span>
+            <span class="stage-tag">NDJSON Export</span>
           </div>
         </div>
 
@@ -692,12 +692,12 @@
           </div>
         </div>
         <div class="pillar-body">
-          To accommodate tens of millions of events per second generated across global enterprise infrastructure, the ingestion layer is being upgraded from purely interpreted Python dispatch to SIMD-accelerated zero-copy parsing kernels.
+          Future proposal: investigate distributed ingestion and optimized parsing for higher event volumes. The current prototype is synchronous and has no production-scale throughput benchmark.
         </div>
         <ul class="spec-list">
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Rust / PyO3 Kernels:</strong> Zero-copy parsing routines for high-frequency formats (Syslog RFC 5424, CEF, LEEF).</span></li>
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Distributed Message Bus:</strong> Native Apache Kafka &amp; Redpanda partitioned consumer groups with backpressure management.</span></li>
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Target Throughput:</strong> Sustained &gt;500,000 EPS per cluster node with p99 normalization latency under 1.2ms.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Exploration:</strong> Evaluate Rust/PyO3 parsing kernels only if benchmarks show a need.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Future architecture:</strong> Consider Kafka or Redpanda, partitioned workers, and backpressure handling.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Performance targets:</strong> Set measurable throughput and latency goals after baseline and load testing.</span></li>
         </ul>
       </div>
 
@@ -711,12 +711,12 @@
           </div>
         </div>
         <div class="pillar-body">
-          Zero-day log formats, proprietary appliance outputs, and silent schema drifts frequently break fragile SIEM parsers. ULPF incorporates structural token clustering and adaptive inference to handle unknown formats automatically.
+          Future proposal: research assisted format discovery and schema drift alerts. The current prototype uses explicit parsers and heuristic format detection; it does not automatically parse unknown proprietary formats.
         </div>
         <ul class="spec-list">
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Entropy Token Classification:</strong> Automatically delineates key-value delimiters, headers, timestamps, and IP addresses.</span></li>
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Schema Drift Alerting:</strong> Detects altered field nomenclature (e.g., vendor update renaming <code>src_ip</code> to <code>sourceIP</code>).</span></li>
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Dynamic Rule Hot-Reload:</strong> Ingest new normalization dictionaries at runtime via API without restarting service pods.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Potential research:</strong> Assisted identification of fields and delimiters in new sources.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Potential feature:</strong> Detect schema changes in configured sources.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Potential feature:</strong> Load reviewed parser rules from configuration.</span></li>
         </ul>
       </div>
 
@@ -730,12 +730,12 @@
           </div>
         </div>
         <div class="pillar-body">
-          In legal investigations, regulatory inquiries, and incident response, log authenticity must be indisputable. ULPF provides mathematically verifiable proof of log integrity from the moment of ingestion.
+          The prototype hashes event text and anchors batch Merkle roots in a local hashchain. Stronger external trust, inclusion proofs, and managed key custody are future enhancements.
         </div>
         <ul class="spec-list">
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>RFC 6962 Merkle Tree Proofs:</strong> Generate cryptographic proof that an individual event was part of a specific block without disclosing adjacent records.</span></li>
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Hardware HSM / KMS Signatures:</strong> Blocks are digitally signed using Cloud KMS (AWS KMS, GCP Cloud HSM) private keys.</span></li>
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Tamper Detection:</strong> Instant flagging of retroactive log tampering or row deletions in forensics audits.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Future:</strong> Consider standardized Merkle inclusion proofs for individual records.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Future:</strong> Add optional managed signing keys or HSM/KMS integration.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Current limitation:</strong> Local hash verification detects changed stored event text and chain blocks; it is not external notarization.</span></li>
         </ul>
       </div>
 
@@ -749,12 +749,12 @@
           </div>
         </div>
         <div class="pillar-body">
-          Eliminating vendor lock-in by providing turnkey streaming exporters that write simultaneously to real-time alerting systems (Splunk, Elastic, Sentinel) and low-cost columnar object storage (Iceberg, Parquet).
+          Future proposal: add outbound connectors for selected SIEM and data-lake platforms. The current API and NDJSON export provide basic consumption paths, not turnkey streaming sinks.
         </div>
         <ul class="spec-list">
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Direct Splunk &amp; Elastic Sinks:</strong> Automated HEC batch dispatch with OCSF-to-ECS semantic translation.</span></li>
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>Apache Iceberg &amp; Parquet:</strong> High-compression columnar storage partition by year/month/day/tenant for DuckDB analytics.</span></li>
-          <li class="spec-item"><span class="spec-check">✓</span><span><strong>OpenTelemetry Exporter:</strong> Standard OTLP gRPC streaming for native integration into OTEL collectors and Grafana.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Future:</strong> Evaluate SIEM connectors and explicit target-schema mappings.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Future:</strong> Evaluate columnar lake formats and partitioning for larger deployments.</span></li>
+          <li class="spec-item"><span class="spec-check">→</span><span><strong>Future:</strong> Consider standard telemetry export protocols where they fit the event model.</span></li>
         </ul>
       </div>
 
@@ -776,7 +776,7 @@
         </div>
         <div class="phase-content">
           <h3>Core Engine &amp; Multi-Format Zero-Dependency Parsers</h3>
-          <p>Establish production-grade parsing foundation covering the 6 primary enterprise logging standards with strict zero-external-dependency rule.</p>
+          <p>Prototype parser foundation for six selected log formats. Coverage is format-based and does not mean every vendor variant is supported.</p>
           <div class="phase-milestones">
             <span class="milestone-pill">Syslog RFC 5424 / 3164</span>
             <span class="milestone-pill">CEF v0 / v1</span>
@@ -798,7 +798,7 @@
         </div>
         <div class="phase-content">
           <h3>Enterprise Hardening &amp; Test Lab Suite</h3>
-          <p>Production hardening with token bucket rate limiting, IP throttling, comprehensive multi-vendor test lab, and automated Swagger/ReDoc schemas.</p>
+          <p>Prototype API safeguards and test samples. This phase is not a claim of production certification or comprehensive vendor coverage.</p>
           <div class="phase-milestones">
             <span class="milestone-pill">Token-Bucket Rate Limiter</span>
             <span class="milestone-pill">Input Sanitization (XSS/SQLi)</span>

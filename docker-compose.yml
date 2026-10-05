@@ -19,6 +19,7 @@ services:
       retries: 10
 
   ulpf:
+    image: ulpf:local
     build: .
     depends_on:
       db:

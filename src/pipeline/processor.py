@@ -16,11 +16,11 @@ from sqlalchemy.orm import Session
 
 from config import Config
 from integrity.blockchain import LocalHashchain
-from integrity.hasher import merkle_root
+from integrity.hasher import merkle_root, sha256_hash
 from normalizer.normalizer import normalize
 from parser import UnknownFormatError, dispatch
 from schema.universal_event import UniversalEvent
-from storage.models import IntegrityBatch, TamperCheck
+from storage.models import IntegrityBatch, RawBatchPayload, TamperCheck
 from storage.normalized_event_repo import insert_normalized_event
 from storage.raw_event_repo import get_raw_event, insert_raw_event
 
@@ -36,9 +36,14 @@ def process_log_line(
     """
     Full pipeline for a single log line.
 
+    Preservation contract:
+      raw_line is stored and hashed exactly as received (no mutation).
+      A stripped copy (parse_src) is used only for format detection and parsing.
+      This ensures the SHA-256 hash and stored raw_data are always consistent.
+
     Steps:
-      1. Detect format + parse → parsed dict
-      2. Insert raw_event (with sha256 hash)
+      1. Detect format + parse → parsed dict  (uses stripped copy for parser)
+      2. Insert raw_event (with sha256 hash of ORIGINAL text)
       3. Generate UUIDs for both raw and normalized events
       4. Normalize → OCSF event dict
       5. Validate against Pydantic schema
@@ -48,21 +53,23 @@ def process_log_line(
     Returns the OCSF event dict on success.
     On parse error, still stores the raw event and returns an error-flagged dict.
     """
-    raw_line = raw_line.strip()
-    if not raw_line:
+    # Preserve the exact submitted text for storage and hashing.
+    # Use a stripped copy only for parser detection/dispatch.
+    parse_src = raw_line.strip()
+    if not parse_src:
         return {}
 
-    # ── Step 1: detect + parse ────────────────────────────────────────────────
+    # ── Step 1: detect + parse (uses stripped copy) ───────────────────────────
     try:
-        format_id, parsed = dispatch(raw_line)
+        format_id, parsed = dispatch(parse_src)
     except UnknownFormatError as exc:
         format_id = "unknown"
         parsed = {"error_message": str(exc), "raw_data": raw_line}
 
-    # ── Step 2: store raw event ───────────────────────────────────────────────
+    # ── Step 2: store raw event (original text, not stripped) ───────────────
     raw_event = insert_raw_event(
         session=session,
-        raw_data=raw_line,
+        raw_data=raw_line,       # ORIGINAL text — not stripped
         source_format=format_id,
         source_file=source_file,
         batch_id=batch_id,
@@ -80,6 +87,7 @@ def process_log_line(
         ulpf_raw_event_id=raw_event_id,
         log_timezone=Config.LOG_TIMEZONE,
     )
+    ocsf["raw_data"] = raw_line
 
     # ── Step 5: validate (log warnings but don't fail the pipeline) ───────────
     try:
@@ -105,6 +113,7 @@ def process_batch(
     source_file: str,
     session: Session,
     blockchain: LocalHashchain,
+    raw_payload: str | None = None,
 ) -> dict[str, Any]:
     """
     Process a batch of raw log lines through the full pipeline.
@@ -112,8 +121,8 @@ def process_batch(
     Steps:
       1. Generate a batch UUID
       2. Process each line (parse → normalize → store)
-      3. Fetch sha256 hashes of all raw events in the batch
-      4. Compute Merkle root of those hashes
+      3. Fetch event hashes and optionally hash the original API payload
+      4. Compute a Merkle root over the available hashes
       5. Append a blockchain block anchoring the Merkle root
       6. Record the IntegrityBatch in the DB
       7. Return a summary dict
@@ -145,7 +154,9 @@ def process_batch(
     session.flush()
 
     raw_events = get_raw_events_by_batch(session, str(batch_id))
-    hashes = [re.sha256_hash for re in raw_events]
+    hashes = [raw_event.sha256_hash for raw_event in raw_events]
+    if raw_payload is not None:
+        hashes.append(sha256_hash(raw_payload))
 
     # Compute Merkle root and anchor on blockchain
     root = merkle_root(hashes)
@@ -164,6 +175,12 @@ def process_batch(
         blockchain_block_hash=block["block_hash"],
     )
     session.add(ib)
+    if raw_payload is not None:
+        session.add(RawBatchPayload(
+            batch_id=batch_id,
+            raw_payload=raw_payload,
+            sha256_hash=sha256_hash(raw_payload),
+        ))
 
     return {
         "batch_id": str(batch_id),

@@ -34,12 +34,12 @@ Fortinet CSV       ─┘
 | **6 Zero-Dependency Parsers** | CEF, Syslog (RFC 3164/5424), JSON, XML, CSV, LEEF 1.0/2.0 |
 | **OCSF 1.9.0 Normalization** | Canonical `Network Activity` schema, class_uid 4001 |
 | **Merkle Hashchain Ledger** | SHA-256 per event → Merkle root per batch → Blockchain block |
-| **Tamper Detection** | Re-hash raw bytes on demand; flags any modification instantly |
+| **Tamper Detection** | Re-hash stored event text on demand and flag any modification |
 | **Rate Limiting** | 60 req/min on ingest, 120 req/min global (configurable) |
 | **Payload Protection** | 2 MB hard cap + 500 line batch cap — DoS-resistant |
 | **OWASP Headers** | `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection` |
 | **Optional API Key Auth** | Guard all endpoints via `X-API-Key` header |
-| **Zero External Runtime** | No Kafka, no Redis, no ML models — just Python + SQLite/PostgreSQL |
+| **Prototype Runtime** | Python + SQLite/PostgreSQL; no Kafka, Redis, or ML models |
 | **Interactive UI** | Live parser playground, blockchain ledger viewer, event history |
 | **Test Lab** | 60+ real-vendor log samples across all 6 formats, copy-to-parser in one click |
 
@@ -172,13 +172,40 @@ ULPF is hardened against common web attack vectors out of the box:
 ✓ Payload size cap      2 MB per request (HTTP 413 on violation)
 ✓ Batch line cap        500 lines per ingest request (HTTP 413 on violation)
 ✓ OWASP headers         X-Content-Type-Options · X-Frame-Options · X-XSS-Protection
-✓ Input sanitization    All raw log text stripped of control characters
+✓ Parser isolation      Parsers receive a trimmed copy; stored event text is retained
 ✓ API Key auth          Optional ULPF_API_KEY — header or query param
 ✓ Error sanitization    500 errors never expose stack traces or DB credentials
 ✓ CORS                  Configurable (open for demo, restrict for production)
 ```
 
 All security settings are controlled via environment variables — no code changes needed.
+
+Raw preservation applies to each non-blank submitted event line: leading and trailing
+whitespace is retained in the database, normalized event, and SHA-256 input. The API
+also stores the complete decoded multi-line `logs` text, including blank lines and
+line endings, and includes its SHA-256 digest in the batch Merkle root. Use
+**Download submitted batch (.txt)** after ingestion to retrieve that exact decoded
+text. The original HTTP request bytes and character encoding are not stored. CLI
+ingestion stores event lines but does not retain a single submitted batch payload.
+
+The Playground draft remains in the open browser page until cleared or the page is
+closed; it is not automatically saved in browser storage. Use **Download draft** to
+save the current textarea contents, or use the raw-download action in Event History
+to retrieve an already-ingested event from the database.
+
+## Prototype scope and future work
+
+The current prototype focuses on selected perimeter/security-device logs in six
+formats and normalizes them to an OCSF 1.9.0 Network Activity subset. The parser
+registry is a developer extension point, but adding a source currently requires
+parser and registry code changes. The REST API and NDJSON export provide integration
+surfaces; outbound SIEM and data-lake connectors are not implemented.
+
+Distributed ingestion and verified billion-event/day throughput, AI/ML analytics,
+automated parser onboarding, broader OCSF event classes, and production-validated
+air-gapped installation remain future work. The offline Docker image preparation
+procedure is documented in [ARCHITECTURE.md](./ARCHITECTURE.md), but has not yet
+been tested on a disconnected host.
 
 ---
 

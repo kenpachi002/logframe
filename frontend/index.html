@@ -20,6 +20,7 @@
       --bg-hover:    #1a1a1a;
       --border:      #222222;
       --border-dim:  #1a1a1a;
+      --header-bg:   rgba(8,8,8,0.92);
       --accent:      #7c3aed;
       --accent-dim:  #5b21b6;
       --accent-glow: rgba(124,58,237,0.15);
@@ -44,6 +45,27 @@
       --json-brace:  #e5e7eb;
     }
 
+    /* ── Light Theme ──────────────────────────────────────────── */
+    [data-theme="light"] {
+      --bg:          #f5f5f5;
+      --bg-panel:    #ebebeb;
+      --bg-input:    #fafafa;
+      --bg-card:     #e4e4e4;
+      --bg-hover:    #dcdcdc;
+      --border:      #cccccc;
+      --border-dim:  #d8d8d8;
+      --header-bg:   rgba(245,245,245,0.95);
+      --text:        #111111;
+      --text-dim:    #444444;
+      --text-muted:  #777777;
+      --json-key:    #6d28d9;
+      --json-str:    #c2410c;
+      --json-num:    #065f46;
+      --json-bool:   #1d4ed8;
+      --json-null:   #6b7280;
+      --json-brace:  #111111;
+    }
+
     html { scroll-behavior: smooth; }
 
     body {
@@ -66,7 +88,7 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(8,8,8,0.92);
+      background: var(--header-bg);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
@@ -76,6 +98,25 @@
       align-items: center;
       gap: 40px;
     }
+
+    /* ── Theme toggle button ──────────────────────────────────── */
+    .theme-toggle {
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .theme-toggle:hover { color: var(--text); border-color: #555; background: var(--bg-hover); }
+    .theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     .logo {
       display: flex;
@@ -529,7 +570,7 @@
       color: var(--text);
     }
 
-    .format-select option { background: #1a1a1a; }
+    .format-select option { background: var(--bg-card); }
 
     /* ── Right Panel Output ───────────────────────────────────── */
     .output-tabs {
@@ -1164,12 +1205,16 @@
   </a>
 
   <nav class="header-nav">
-    <button class="nav-link active" onclick="switchMainTab('parser')">Playground</button>
-    <button class="nav-link" onclick="switchMainTab('blockchain')">Blockchain</button>
-    <button class="nav-link" onclick="switchMainTab('history')">Event History</button>
+    <button class="nav-link active" data-tab="parser" aria-pressed="true" onclick="switchMainTab('parser')">Playground</button>
+    <button class="nav-link" data-tab="blockchain" aria-pressed="false" onclick="switchMainTab('blockchain')">Blockchain</button>
+    <button class="nav-link" data-tab="history" aria-pressed="false" onclick="switchMainTab('history')">Event History</button>
   </nav>
 
   <div class="header-status">
+    <button class="theme-toggle" id="theme-toggle-btn"
+      title="Toggle light/dark theme"
+      aria-label="Toggle light/dark theme"
+      onclick="toggleTheme()">🌙</button>
     <button class="icon-btn" title="Configure API Key (Optional Auth)" onclick="promptApiKey()" style="font-size:13px">🔑</button>
     <div class="status-pill loading" id="api-status">
       <div class="status-dot pulse"></div>
@@ -1192,9 +1237,9 @@
 
 <!-- ── Playground Tabs ────────────────────────────────────── -->
 <div class="playground-tabs">
-  <button class="play-tab active" id="ptab-parser" onclick="switchPlayTab('parser')">Log Parser</button>
-  <button class="play-tab" id="ptab-blockchain" onclick="switchPlayTab('blockchain')">Blockchain Ledger</button>
-  <button class="play-tab" id="ptab-history" onclick="switchPlayTab('history')">Event History</button>
+  <button class="play-tab active" id="ptab-parser" aria-pressed="true" onclick="switchPlayTab('parser')">Log Parser</button>
+  <button class="play-tab" id="ptab-blockchain" aria-pressed="false" onclick="switchPlayTab('blockchain')">Blockchain Ledger</button>
+  <button class="play-tab" id="ptab-history" aria-pressed="false" onclick="switchPlayTab('history')">Event History</button>
 </div>
 
 <!-- ════════════════════════════════════════════════════════ -->
@@ -1231,8 +1276,9 @@
           <span>Raw Log Input</span>
         </div>
         <div class="panel-bar-actions">
-          <button class="icon-btn" title="Clear" onclick="clearInput()">✕</button>
-          <button class="icon-btn" title="Copy input" onclick="copyText('log-input')">⎘</button>
+          <button class="icon-btn" title="Clear input" onclick="clearInput()">✕</button>
+          <button class="icon-btn" title="Copy input to clipboard" onclick="copyText('log-input')">⎘</button>
+          <button class="icon-btn" title="Download current draft as .txt (unsaved — not yet ingested)" onclick="downloadDraft()">⬇</button>
         </div>
       </div>
 
@@ -1344,6 +1390,9 @@
       <span class="batch-stat-label">Errors</span>
       <span class="batch-stat-value orange" id="bb-errors">0</span>
     </div>
+    <button class="btn btn-sm" id="download-batch-btn" onclick="downloadRawBatch()" title="Download the exact submitted text for this batch">
+      Download submitted batch (.txt)
+    </button>
   </div>
 
 </section>
@@ -1406,10 +1455,11 @@
             <th>Dst IP</th>
             <th>Protocol</th>
             <th>Message</th>
+            <th title="Download the persisted raw event text from the database">Raw ↓</th>
           </tr>
         </thead>
         <tbody id="history-tbody">
-          <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px;">
+          <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:32px;">
             No events yet. Ingest some logs.
           </td></tr>
         </tbody>
@@ -1480,16 +1530,29 @@ function promptApiKey() {
 }
 
 // ── Tab Switching ─────────────────────────────────────────
+// Top-nav and playground tabs both control the same three sections.
+// switchMainTab delegates to switchPlayTab so they stay in sync.
 function switchMainTab(tab) {
-  document.querySelectorAll('.header-nav .nav-link').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  switchPlayTab(tab);
 }
 
 function switchPlayTab(tab) {
-  document.querySelectorAll('.play-tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('ptab-' + tab).classList.add('active');
+  const section = document.getElementById('section-' + tab);
+  if (!section) throw new Error(`Unknown section: ${tab}`);
+
+  // Keep both navigation rows synchronized without relying on the global event object.
+  document.querySelectorAll('.header-nav .nav-link').forEach(b => {
+    const selected = b.getAttribute('data-tab') === tab;
+    b.classList.toggle('active', selected);
+    b.setAttribute('aria-pressed', String(selected));
+  });
+  document.querySelectorAll('.play-tab').forEach(b => {
+    const selected = b.id === 'ptab-' + tab;
+    b.classList.toggle('active', selected);
+    b.setAttribute('aria-pressed', String(selected));
+  });
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
-  document.getElementById('section-' + tab).classList.add('active');
+  section.classList.add('active');
   if (tab === 'blockchain') loadBlockchain();
   if (tab === 'history')    loadHistory();
 }
@@ -1507,6 +1570,7 @@ async function checkHealth() {
   const pill = document.getElementById('api-status');
   try {
     const res = await fetch('/api/health');
+    if (!res.ok) throw new Error(`Health request failed: HTTP ${res.status}`);
     const data = await res.json();
     if (data.db_ok) {
       pill.className = 'status-pill ok';
@@ -1579,8 +1643,10 @@ async function loadSample() {
 
 // ── Parse & Normalize ─────────────────────────────────────
 async function parseLogs() {
-  const logText = document.getElementById('log-input').value.trim();
-  if (!logText) return;
+  // Use .value directly — do NOT trim. The API handles empty lines,
+  // and trimming here would alter leading/trailing whitespace in multi-line input.
+  const logText = document.getElementById('log-input').value;
+  if (!logText.trim()) return;   // only skip if truly all-whitespace
 
   const btn = document.getElementById('parse-btn');
   btn.disabled = true;
@@ -1778,11 +1844,15 @@ function showIntegrityPanel(batch, evt) {
 
 // ── Blockchain Tab ────────────────────────────────────────
 async function loadBlockchain() {
+  const list = document.getElementById('block-list');
+  list.innerHTML = '<div class="empty-state" style="min-height:120px"><p>Loading blockchain…</p></div>';
   try {
     const [healthRes, blocksRes] = await Promise.all([
-      fetch('/api/health'),
+      fetch('/api/health', { headers: getAuthHeaders() }),
       fetch('/api/blockchain/blocks', { headers: getAuthHeaders() }),
     ]);
+    if (!healthRes.ok) throw new Error(`Health request failed: HTTP ${healthRes.status}`);
+    if (!blocksRes.ok) throw new Error(`Blockchain request failed: HTTP ${blocksRes.status}`);
     const health = await healthRes.json();
     const blocks = await blocksRes.json();
 
@@ -1795,6 +1865,9 @@ async function loadBlockchain() {
 
     renderBlockList(blocks.blocks);
   } catch (e) {
+    list.innerHTML = `<div class="empty-state" style="min-height:120px">
+      <p style="color:var(--red)">Failed to load blockchain: ${escHtml(e.message)}</p>
+    </div>`;
     toast('Failed to load blockchain: ' + e.message, 'error');
   }
 }
@@ -1836,6 +1909,7 @@ async function verifyChain() {
       method: 'POST',
       headers: getAuthHeaders(),
     });
+    if (!res.ok) throw new Error(`Chain verification failed: HTTP ${res.status}`);
     const data = await res.json();
     el.textContent = data.is_valid
       ? `✓ ${data.detail}`
@@ -1854,36 +1928,99 @@ async function verifyChain() {
 // ── Event History Tab ─────────────────────────────────────
 async function loadHistory() {
   const tbody = document.getElementById('history-tbody');
-  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">Loading…</td></tr>';
   try {
-    const res = await fetch('/api/events?limit=100', {
-      headers: getAuthHeaders(),
-    });
+    const res = await fetch('/api/events?limit=100', { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ': ' + res.statusText);
     const data = await res.json();
     if (!data.events.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px;">No events yet. Ingest some logs.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:32px;">No events yet. Ingest some logs.</td></tr>';
       return;
     }
     tbody.innerHTML = data.events.map((e, i) => {
-      const fmt = e.metadata?.source_format || 'unknown';
-      const sev = e.severity_id ?? -1;
-      const src = e.src_endpoint?.ip || '—';
-      const dst = e.dst_endpoint?.ip || '—';
-      const proto = e.connection_info?.protocol_name || '—';
-      const msg = (e.message || '—').substring(0, 48);
+      const fmt    = e.metadata?.source_format || 'unknown';
+      const sev    = e.severity_id ?? -1;
+      const src    = e.src_endpoint?.ip || '—';
+      const dst    = e.dst_endpoint?.ip || '—';
+      const proto  = e.connection_info?.protocol_name || '—';
+      const msg    = (e.message || '—').substring(0, 48);
+      const normId = e.ulpf_event_id || '';
       return `<tr onclick="showEventDetail(${JSON.stringify(JSON.stringify(e)).replace(/"/g, '&quot;')})">
         <td>${data.total - i}</td>
-        <td><span class="fmt-badge fmt-${fmt}">${fmt}</span></td>
-        <td><span class="sev-badge sev-${sev}">${e.severity || 'Unknown'}</span></td>
+        <td><span class="fmt-badge fmt-${escHtml(fmt)}">${escHtml(fmt)}</span></td>
+        <td><span class="sev-badge sev-${sev}">${escHtml(e.severity || 'Unknown')}</span></td>
         <td>${escHtml(e.activity_name || '—')}</td>
         <td>${escHtml(src)}</td>
         <td>${escHtml(dst)}</td>
         <td>${escHtml(proto)}</td>
         <td style="color:var(--text-dim)">${escHtml(msg)}</td>
+        <td onclick="event.stopPropagation()">${normId
+          ? `<button class="icon-btn btn-sm" title="Download persisted raw event from database"
+               onclick="downloadRawEvent('${escHtml(normId)}')">⬇</button>`
+          : '—'}</td>
       </tr>`;
     }).join('');
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--red);padding:20px;">Error: ${escHtml(e.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--red);padding:20px;">⚠ Failed to load events: ${escHtml(e.message)}</td></tr>`;
+  }
+}
+
+// Download the persisted raw event text from the database for a given normalized event ID
+async function downloadRawEvent(normalizedEventId) {
+  try {
+    const res = await fetch(`/api/events/${encodeURIComponent(normalizedEventId)}/raw`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(err.detail || res.statusText);
+    }
+    const data = await res.json();
+    const text = data.raw_data || '';
+    const ts   = data.received_at ? data.received_at.replace(/[:.]/g, '-').substring(0, 19) : 'event';
+    const fname = `ulpf_raw_${ts}.txt`;
+    const blob  = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url   = URL.createObjectURL(blob);
+    const a     = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast('Raw event downloaded', 'success');
+  } catch (err) {
+    toast('Download failed: ' + err.message, 'error');
+  }
+}
+
+async function downloadRawBatch() {
+  const batchId = state.currentBatch?.batch_id;
+  if (!batchId) {
+    toast('No ingested batch is available to download', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/raw/batch/${encodeURIComponent(batchId)}`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error(`Batch download failed: HTTP ${res.status}`);
+    const data = await res.json();
+    if (typeof data.raw_payload !== 'string') {
+      throw new Error('The original submitted batch is unavailable for this record');
+    }
+
+    const blob = new Blob([data.raw_payload], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ulpf_batch_${batchId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast('Submitted batch downloaded', 'success');
+  } catch (err) {
+    toast('Batch download failed: ' + err.message, 'error');
   }
 }
 
@@ -1901,6 +2038,47 @@ function showEventDetail(jsonStr) {
     document.getElementById('otab-ocsf').classList.add('active');
     document.getElementById('otab-fields').classList.remove('active');
   } catch {}
+}
+
+// ── Theme Toggle ──────────────────────────────────────────
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const next = isDark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  const btn = document.getElementById('theme-toggle-btn');
+  btn.textContent  = next === 'light' ? '☀️' : '🌙';
+  btn.title        = next === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+  btn.setAttribute('aria-label', btn.title);
+  // Persist preference (theme only — no log data)
+  try { localStorage.setItem('ulpf_theme', next); } catch {}
+}
+
+function initTheme() {
+  let pref = 'dark';
+  try { pref = localStorage.getItem('ulpf_theme') || 'dark'; } catch {}
+  document.documentElement.setAttribute('data-theme', pref);
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) {
+    btn.textContent = pref === 'light' ? '☀️' : '🌙';
+    btn.title       = pref === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+    btn.setAttribute('aria-label', btn.title);
+  }
+}
+
+// ── Download current draft (textarea value, unsaved) ───────
+function downloadDraft() {
+  const text = document.getElementById('log-input').value;
+  if (!text.trim()) { toast('Nothing to download — input is empty', 'error'); return; }
+  const ts    = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+  const fname = `ulpf_draft_${ts}.txt`;
+  const blob  = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast('Draft downloaded (not yet ingested)', 'success');
 }
 
 // ── Utilities ─────────────────────────────────────────────
@@ -1945,8 +2123,11 @@ function expandOutput() {
   const evt = state.events[state.currentEventIdx];
   if (!evt) return;
   const win = window.open('', '_blank');
+  const styles = getComputedStyle(document.documentElement);
+  const background = styles.getPropertyValue('--bg').trim();
+  const foreground = styles.getPropertyValue('--text').trim();
   win.document.write(`<html><head><title>OCSF Event</title>
-    <style>body{background:#080808;color:#e5e7eb;font-family:'JetBrains Mono',monospace;font-size:13px;padding:24px;}</style>
+    <style>body{background:${background};color:${foreground};font-family:'JetBrains Mono',monospace;font-size:13px;padding:24px;}</style>
     </head><body><pre>${syntaxHighlight(JSON.stringify(evt, null, 2))}</pre></body></html>`);
 }
 
@@ -1960,6 +2141,7 @@ function toast(msg, type = 'success') {
 }
 
 // ── Init ──────────────────────────────────────────────────
+initTheme();
 checkHealth();
 setInterval(checkHealth, 30000);
 </script>

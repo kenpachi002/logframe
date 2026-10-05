@@ -58,7 +58,9 @@ def ingest_logs(
       8. Append a new blockchain block anchoring the Merkle root
       9. Return batch summary + all normalized events
     """
-    lines = [ln for ln in req.logs.splitlines() if ln.strip()]
+    # Each stored raw event represents the submitted line contents (without the
+    # newline delimiter). Keep whitespace on non-empty lines intact.
+    lines = [line for line in req.logs.splitlines() if line.strip()]
     if not lines:
         raise HTTPException(status_code=422, detail="No non-empty log lines found in input.")
 
@@ -79,6 +81,7 @@ def ingest_logs(
                 source_file="ui-ingest",
                 session=session,
                 blockchain=blockchain,
+                raw_payload=req.logs,
             )
             batch_id = result["batch_id"]
 
